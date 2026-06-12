@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Open Graph Meta Tags -->
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Iris Classification | Vikram Singh" />
+        <meta property="og:description" content="An interactive Iris Classification page made with HTML, CSS, and JavaScript by Vikram Singh."/>
+        <meta property="og:image" content="https://iris-classification.vercel.app/assets/og-image.jpeg" />
+        <meta property="og:url" content="https://iris-classification.vercel.app" />
+        <meta property="og:site_name" content="Vikram Singh Portfolio Projects" />
+
+        <!-- Twitter Meta Tags -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Iris Classification | Vikram Singh" />
+        <meta name="twitter:description" content="Interactive Iris Classification page made with HTML, CSS, and JavaScript by Vikram Singh."/>
+        <meta name="twitter:image" content="https://iris-classification.vercel.app/assets/og-image.jpeg" />
+
+        <!-- Author -->
+        <meta name="author" content="Vikram Singh" />
+<title>babamosie Code — Iris Classification Walkthrough</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#11161d;
+    --border:#1f2630;
+    --text:#cfd6e0;
+    --dim:#6b7785;
+    --accent:#7c9eff;
+    --accent2:#3ddc97;
+    --warn:#e0a64f;
+    --user:#e8edf5;
+    --code-bg:#0a0e14;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'SF Mono', 'Fira Code', Menlo, Consolas, monospace;
+    line-height:1.55;
+  }
+  .topbar{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 18px;
+    border-bottom:1px solid var(--border);
+    background:#0b0f15;
+    position:sticky;top:0;z-index:5;
+  }
+  .dot{width:11px;height:11px;border-radius:50%;}
+  .dot.red{background:#ff5f56;} .dot.yellow{background:#ffbd2e;} .dot.green{background:#27c93f;}
+  .title{margin-left:10px;color:var(--dim);font-size:13px;letter-spacing:.03em;}
+  .wrap{max-width:880px;margin:0 auto;padding:24px 18px 80px;}
+
+  .turn{margin-bottom:26px;}
+  .who{
+    font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--dim);margin-bottom:6px;display:flex;align-items:center;gap:8px;
+  }
+  .who.user{color:var(--accent2);}
+  .who.babamosie{color:var(--accent);}
+  .badge{
+    display:inline-block;width:18px;height:18px;border-radius:4px;
+    text-align:center;line-height:18px;font-size:11px;font-weight:700;
+  }
+  .badge.user{background:rgba(61,220,151,.15);color:var(--accent2);}
+  .badge.babamosie{background:rgba(124,158,255,.15);color:var(--accent);}
+
+  .msg{font-size:14px;color:var(--text);}
+  .msg p{margin:0 0 10px;}
+  .msg p:last-child{margin-bottom:0;}
+  .user .msg{color:var(--user);}
+
+  .tool{
+    margin:12px 0;
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    background:var(--panel);
+  }
+  .tool-head{
+    padding:8px 12px;
+    font-size:12px;
+    color:var(--dim);
+    background:#0e131a;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:8px;
+  }
+  .tool-head .icon{color:var(--accent2);}
+  .tool-body{
+    padding:12px 14px;
+    font-size:12.5px;
+    overflow-x:auto;
+  }
+  pre{margin:0;white-space:pre;background:var(--code-bg);
+      border-radius:6px;padding:10px 12px;font-size:12px;color:#9fb3c8;
+      overflow-x:auto;}
+  .out{color:#8fd6a8;}
+  .out .green{color:#3ddc97;}
+  .out .head{color:var(--accent);font-weight:600;}
+  .out .num{color:var(--warn);}
+
+  code{
+    background:#1a212c;border-radius:4px;padding:1px 5px;
+    font-size:12.5px;color:#e3b78f;
+  }
+  .filechip{
+    display:inline-flex;align-items:center;gap:6px;
+    background:#16202b;border:1px solid var(--border);
+    border-radius:6px;padding:2px 8px;font-size:12px;color:var(--accent2);
+  }
+  h3{font-size:14px;color:var(--text);margin:0 0 8px;font-weight:700;}
+  ul{margin:6px 0 6px 18px;padding:0;}
+  li{margin-bottom:4px;font-size:13.5px;}
+  .step-num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;border-radius:50%;
+    background:rgba(124,158,255,.15);color:var(--accent);
+    font-size:11px;font-weight:700;margin-right:8px;flex:none;
+  }
+  .step{display:flex;align-items:flex-start;margin-bottom:10px;}
+  .step .body{flex:1;}
+  .divider{
+    border:none;border-top:1px dashed var(--border);
+    margin:30px 0;
+  }
+  .small{color:var(--dim);font-size:12px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0;}
+  th,td{border:1px solid var(--border);padding:6px 10px;text-align:left;}
+  th{background:#141b24;color:var(--accent);font-weight:600;}
+  .img-result{
+    display:inline-flex;flex-direction:column;align-items:center;gap:4px;
+    background:#0e131a;border:1px solid var(--border);border-radius:6px;
+    padding:8px;margin:4px 4px 0 0;width:130px;
+  }
+  .img-result .ph{
+    width:110px;height:74px;border-radius:4px;
+    background:linear-gradient(135deg,#1c2733,#10151c);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--dim);font-size:22px;
+  }
+  .img-result .name{font-size:10.5px;color:var(--dim);text-align:center;word-break:break-all;}
+  .grid-img{display:flex;flex-wrap:wrap;gap:0;}
+  .accordion{border:1px solid var(--border);border-radius:8px;margin:10px 0;background:var(--panel);}
+  .acc-head{padding:9px 12px;font-size:13px;color:var(--accent);cursor:default;border-bottom:1px solid var(--border);font-weight:600;}
+  .acc-body{padding:12px 14px;font-size:13px;}
+  .acc-body p{margin:0 0 8px;}
+  .footer-note{
+    text-align:center;color:var(--dim);font-size:12px;margin-top:40px;
+    padding-top:16px;border-top:1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+  <span class="title">babamosie code — babamosie333-iris-classification</span>
+</div>
+
+<div class="wrap">
+
+  <!-- USER 1 -->
+  <div class="turn">
+    <div class="who user"><span class="badge user">U</span>you</div>
+    <div class="msg">
+      <p>I just cloned this repo: <code>babamosie333-iris-classification</code>. Can you walk me through setting it up and running it, and explain what the project actually does?</p>
+    </div>
+  </div>
+
+  <!-- babamosie 1 -->
+  <div class="turn">
+    <div class="who babamosie"><span class="badge babamosie">C</span>babamosie</div>
+    <div class="msg">
+      <p>Sure — let's start by looking at what's in the repo so I understand the project before we run anything.</p>
+    </div>
+    <div class="tool">
+      <div class="tool-head"><span class="icon">▸</span> Bash <span class="small">ls -la</span></div>
+      <div class="tool-body">
+<pre class="out"><span class="head">babamosie333-iris-classification/</span>
+<span class="green">drwxr-xr-x</span>  .
+<span class="green">-rw-r--r--</span>  Readme.md
+<span class="green">-rw-r--r--</span>  iris_classification.py</pre>
+      </div>
+    </div>
+    <div class="tool">
+      <div class="tool-head"><span class="icon">▸</span> Read <span class="filechip">Readme.md</span></div>
+      <div class="tool-body">
+        <p style="font-size:13px;">The README confirms this is a self-contained <strong>Iris Flower Classification</strong> pipeline: it trains three classifiers (KNN, Logistic Regression, Decision Tree), runs EDA, saves 8 diagnostic plots, and ends with predictions on three new flower samples.</p>
+      </div>
+    </div>
+    <div class="msg">
+      <p>This is a single-script ML project — no folders, no config files, just one Python file (<code>iris_classification.py</code>) that does everything end-to-end. Here's the plan I'll follow:</p>
+      <div class="step"><span class="step-num">1</span><div class="body">Set up a Python environment and install dependencies</div></div>
+      <div class="step"><span class="step-num">2</span><div class="body">Run the script and walk through each stage of its output</div></div>
+      <div class="step"><span class="step-num">3</span><div class="body">Explain the generated plots and what each one tells you</div></div>
+      <div class="step"><span class="step-num">4</span><div class="body">Explain the three models, the metrics, and the final predictions</div></div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- USER 2 -->
+  <div class="turn">
+    <div class="who user"><span class="badge user">U</span>you</div>
+    <div class="msg"><p>Sounds good — let's set it up.</p></div>
+  </div>
+
+  <!-- babamosie 2: SETUP -->
+  <div class="turn">
+    <div class="who babamosie"><span class="badge babamosie">C</span>babamosie</div>
+    <div class="msg"><h3>Step 1 — Environment setup</h3>
+      <p>The README lists <code>scikit-learn</code>, <code>pandas</code>, <code>matplotlib</code>, and <code>seaborn</code> as the only requirements, and Python 3.8+. I'll create an isolated virtual environment first so this doesn't pollute your global Python install.</p>
+    </div>
+    <div class="tool">
+      <div class="tool-head"><span class="icon">▸</span> Bash <span class="small">python3 -m venv .venv && source .venv/bin/activate</span></div>
+      <div class="tool-body">
+<pre class="out">(.venv) $ python --version
+<span class="green">Python 3.11.6</span></pre>
+      </div>
+    </div>
+    <div class="tool">
+      <div class="tool-head"><span class="icon">▸</span> Bash <span class="small">pip install scikit-learn pandas matplotlib seaborn</span></div>
+      <div class="tool-body">
+<pre class="out">Collecting scikit-learn
+Collecting pandas
+Collecting matplotlib
+Collecting seaborn
+  ... resolving dependencies ...
+<span class="green">Successfully installed scikit-learn-1.5.0 pandas-2.2.2 matplotlib-3.9.0
+seaborn-0.13.2 numpy-1.26.4 scipy-1.13.1 joblib-1.4.2</span></pre>
+      </div>
+    </div>
+    <div class="msg">
+      <p>Everything installed cleanly. Note that the script doesn't load any external CSV — it pulls the Iris dataset directly from <code>sklearn.datasets.load_iris()</code>, a built-in toy dataset bundled with scikit-learn. So there's nothing to download separately.</p>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- USER 3 -->
+  <div class="turn">
+    <div class="who user"><span class="badge user">U</span>you</div>
+    <div class="msg"><p>Great, now run it.</p></div>
+  </div>
+
+  <!-- babamosie 3: RUN -->
+  <div class="turn">
+    <div class="who babamosie"><span class="badge babamosie">C</span>babamosie</div>
+    <div class="msg"><h3>Step 2 — Running the pipeline</h3></div>
+    <div class="tool">
+      <div class="tool-head"><span class="icon">▸</span> Bash <span class="small">python iris_classification.py</span></div>
+      <div class="tool-body">
+<pre class="out">=======================================================
+IRIS DATASET — first 5 rows
+=======================================================
+   sepal length (cm)  sepal width (cm)  petal length (cm)  petal width (cm) species
+0                5.1               3.5                1.4               0.2  setosa
+1                4.9               3.0                1.4               0.2  setosa
+2                4.7               3.2                1.3               0.2  setosa
+3                4.6               3.1                1.5               0.2  setosa
+4                5.0               3.6                1.4               0.2  setosa
+
+Shape: (150, 5)
+
+Class distribution:
+ species
+setosa        50
+versicolor    50
+virginica     50
+
+Basic stats:
+       sepal length (cm)  sepal width (cm)  petal length (cm)  petal width (cm)
+count             150.00            150.00             150.00            150.00
+mean                5.84              3.06               3.76              1.20
+std                 0.83              0.44               1.77              0.76
+min                 4.30              2.00               1.00              0.10
+max                 7.90              4.40               6.90              2.50
+
+Train: 120 samples  |  Test: 30 samples</pre>
+      </div>
+    </div>
+
+    <div class="msg">
+      <p>The script then generates the figures and prints model results. Here's what got created in the working directory:</p>
+    </div>
+    <div class="tool">
+      <div class="tool-head"><span class="icon">▸</span> Bash <span class="small">ls *.png</span></div>
+      <div class="tool-body">
+        <div class="grid-img">
+          <div class="img-result"><div class="ph">📊</div><div class="name">iris_pairplot.png</div></div>
+          <div class="img-result"><div class="ph">🟦</div><div class="name">iris_heatmap.png</div></div>
+          <div class="img-result"><div class="ph">📦</div><div class="name">iris_boxplots.png</div></div>
+          <div class="img-result"><div class="ph">🔢</div><div class="name">cm_k-nearest.png</div></div>
+          <div class="img-result"><div class="ph">🔢</div><div class="name">cm_logistic.png</div></div>
+          <div class="img-result"><div class="ph">🔢</div><div class="name">cm_decision.png</div></div>
+          <div class="img-result"><div class="ph">📈</div><div class="name">iris_accuracy_comparison.png</div></div>
+          <div class="img-result"><div class="ph">🌳</div><div class="name">iris_decision_tree.png</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool">
+      <div class="tool-head"><span class="icon">▸</span> Output <span class="small">model results (stdout, continued)</span></div>
+      <div class="tool-body">
+<pre class="out">=======================================================
+  K-Nearest Neighbors (k=3)
+=======================================================
+  Accuracy : 100.00%
+
+              precision    recall  f1-score   support
+      setosa       1.00      1.00      1.00        10
+  versicolor       1.00      1.00      1.00        10
+   virginica       1.00      1.00      1.00        10
+
+=======================================================
+  Logistic Regression
+=======================================================
+  Accuracy : 96.67%
+
+              precision    recall  f1-score   support
+      setosa       1.00      1.00      1.00        10
+  versicolor       1.00      0.90      0.95        10
+   virginica       0.91      1.00      0.95        10
+
+=======================================================
+  Decision Tree (max_depth=4)
+=======================================================
+  Accuracy : 93.33%
+
+              precision    recall  f1-score   support
+      setosa       1.00      1.00      1.00        10
+  versicolor       0.90      0.90      0.90        10
+   virginica       0.90      0.90      0.90        10</pre>
+      </div>
+    </div>
+
+    <div class="tool">
+      <div class="tool-head"><span class="icon">▸</span> Output <span class="small">final inference block</span></div>
+      <div class="tool-body">
+<pre class="out">=======================================================
+  PREDICT NEW SAMPLES
+=======================================================
+
+  Input  : sepal=[5.1, 3.5], petal=[1.4, 0.2]
+  Predicted : SETOSA
+  Probabilities: setosa=100%, versicolor=0%, virginica=0%
+
+  Input  : sepal=[6.0, 2.9], petal=[4.5, 1.5]
+  Predicted : VERSICOLOR
+  Probabilities: setosa=0%, versicolor=100%, virginica=0%
+
+  Input  : sepal=[6.7, 3.0], petal=[5.5, 2.1]
+  Predicted : VIRGINICA
+  Probabilities: setosa=0%, versicolor=0%, virginica=100%
+
+Done! All plots saved as PNG files in the same folder.</pre>
+      </div>
+    </div>
+
+    <p class="small">⚠️ Note: with <code>random_state=42</code> fixed, your numbers will match this exactly. The 100% KNN accuracy is a bit of luck from this particular train/test split — Iris is a very easy, well-separated dataset, so all three models land in the 93–100% range.</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- USER 4 -->
+  <div class="turn">
+    <div class="who user"><span class="badge user">U</span>you</div>
+    <div class="msg"><p>Now explain the project in detail — what each section of the code is doing, and how to read each of the generated plots.</p></div>
+  </div>
+
+  <!-- babamosie 4: DETAILED EXPLANATION -->
+  <div class="turn">
+    <div class="who babamosie"><span class="badge babamosie">C</span>babamosie</div>
+    <div class="msg">
+      <p>Happy to. The script is organized into 8 numbered sections, each building on the last. Here's a breakdown.</p>
+    </div>
+
+    <div class="accordion">
+      <div class="acc-head">1 · Load dataset</div>
+      <div class="acc-body">
+        <p><code>load_iris()</code> returns the classic 150-row Iris dataset: 4 numeric features (sepal length/width, petal length/width, all in cm) and a target label with 3 balanced classes (50 each of setosa, versicolor, virginica). The script wraps this in a pandas DataFrame and adds a readable <code>species</code> column, then prints summary stats so you can sanity-check the data before modeling.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="acc-head">2 · Visualize (EDA)</div>
+      <div class="acc-body">
+        <p><strong>iris_pairplot.png</strong> — a grid of scatter plots for every pair of features, colored by species. This is the most useful plot in the project: it visually shows that <em>setosa</em> is linearly separable from the other two species on almost every feature, while <em>versicolor</em> and <em>virginica</em> overlap somewhat, especially on sepal measurements.</p>
+        <p><strong>iris_heatmap.png</strong> — a Pearson correlation matrix of the 4 features. Petal length and petal width are very strongly correlated (~0.96), and both correlate strongly with sepal length too — this is why petal measurements alone are nearly enough to classify the species.</p>
+        <p><strong>iris_boxplots.png</strong> — four box plots (one per feature) split by species, showing the spread and outliers. Petal length/width show the cleanest separation between classes; sepal width shows the most overlap.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="acc-head">3 · Train/test split & scaling</div>
+      <div class="acc-body">
+        <p>The data is split 80/20 (120 train / 30 test) using <code>stratify=y</code>, which guarantees the 30 test samples still have exactly 10 of each species — so accuracy numbers aren't skewed by an unlucky split.</p>
+        <p><code>StandardScaler</code> is fit on the training data and applied to both train and test sets, producing zero-mean, unit-variance features. This matters for <strong>KNN</strong> (distance-based — large-scale features would dominate) and <strong>Logistic Regression</strong> (gradient-based optimization converges faster and more reliably on scaled data). The <strong>Decision Tree</strong> doesn't need scaling since it splits on raw thresholds, so it's trained on the unscaled <code>X_train</code>/<code>X_test</code>.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="acc-head">4–5 · Define, train & evaluate three models</div>
+      <div class="acc-body">
+        <p>A dictionary maps model names to instantiated estimators. The training loop checks the model name: Decision Tree gets the raw (unscaled) data, the other two get the scaled data. For each model it computes accuracy, prints a full <code>classification_report</code> (precision/recall/F1 per class), and saves a confusion matrix plot.</p>
+        <table>
+          <tr><th>Model</th><th>Key setting</th><th>Why it's used here</th></tr>
+          <tr><td>K-Nearest Neighbors</td><td>k=3</td><td>Simple, distance-based — works great when classes form tight clusters, as Iris does</td></tr>
+          <tr><td>Logistic Regression</td><td>L2 regularized, max_iter=200</td><td>Fast linear baseline; good for mostly-linearly-separable data</td></tr>
+          <tr><td>Decision Tree</td><td>max_depth=4</td><td>Interpretable — depth capped to avoid overfitting on a small dataset, and to keep the printed tree readable</td></tr>
+        </table>
+        <p>The <strong>cm_*.png</strong> confusion matrices show, for each model, how many test samples of each true species were predicted as each class. The diagonal = correct predictions; anything off-diagonal is a misclassification (e.g. the Decision Tree's matrix will show one versicolor misclassified as virginica and vice versa, matching the 90% recall in its report).</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="acc-head">6 · Accuracy comparison chart</div>
+      <div class="acc-body">
+        <p><strong>iris_accuracy_comparison.png</strong> is a horizontal bar chart ranking the three models by test accuracy, with the x-axis zoomed to 0.85–1.02 so the (small) differences between 93%, 97%, and 100% are visible rather than looking identical on a 0–100% scale.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="acc-head">7 · Decision tree visualization</div>
+      <div class="acc-body">
+        <p><strong>iris_decision_tree.png</strong> draws the actual learned tree structure using <code>plot_tree</code> — each box shows the splitting rule (e.g. "petal width ≤ 0.8 cm"), the class distribution at that node, and the majority class. This is the most "explainable" output in the whole project: you can literally read off the rules the model uses, e.g. petal width alone often separates setosa from the rest at the very first split.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="acc-head">8 · Predicting new samples</div>
+      <div class="acc-body">
+        <p>The final block takes three hand-written measurements representing each species, scales them with the <em>same</em> fitted <code>scaler</code> (critical — never re-fit on new data), and runs them through the trained KNN model. <code>predict_proba</code> returns the vote distribution among the 3 nearest neighbors, which is why the probabilities here are clean multiples of 33% (e.g. 100%/0%/0% means all 3 neighbors agreed).</p>
+      </div>
+    </div>
+
+    <div class="msg">
+      <p>Overall, this is a textbook "classification 101" project: it deliberately uses the easiest possible dataset so the focus stays on the <em>workflow</em> — EDA → split/scale → train multiple models → evaluate → visualize → run inference — rather than on squeezing out marginal accuracy gains. If you wanted to extend it, the most natural next steps would be cross-validation (a single 80/20 split on 150 rows is fairly noisy) and trying it on a harder, less-separable dataset to see the models actually disagree more.</p>
+    </div>
+  </div>
+
+  <div class="footer-note">end of session · babamosie333-iris-classification</div>
+</div>
+
+</body>
+</html>
