@@ -3,15 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Iris Pipeline — Live (Pyodide)</title>
+<title>Advanced Iris ML Lab — Live (Pyodide)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <style>
   :root{
     --bg:#0d1117; --panel:#11161d; --border:#1f2630; --text:#cfd6e0;
     --dim:#6b7785; --accent:#7c9eff; --accent2:#3ddc97; --warn:#e0a64f;
-    --code-bg:#0a0e14;
-    --setosa:#534AB7; --versicolor:#0F6E56; --virginica:#993C1D;
+    --code-bg:#0a0e14; --danger:#e0617d;
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);
@@ -22,9 +21,24 @@
   .dot{width:11px;height:11px;border-radius:50%;}
   .dot.red{background:#ff5f56;} .dot.yellow{background:#ffbd2e;} .dot.green{background:#27c93f;}
   .title{margin-left:10px;color:var(--dim);font-size:13px;letter-spacing:.03em;}
-  .wrap{max-width:920px;margin:0 auto;padding:24px 18px 80px;}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 18px 80px;}
 
-  .runbar{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .controls{
+    border:1px solid var(--border);border-radius:8px;background:var(--panel);
+    padding:14px 16px;margin-bottom:18px;
+  }
+  .controls h4{margin:0 0 10px;font-size:12.5px;color:var(--accent);
+                text-transform:uppercase;letter-spacing:.08em;}
+  .radiorow{display:flex;gap:18px;font-size:13px;margin-bottom:10px;flex-wrap:wrap;}
+  .radiorow label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+  .csv-row{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .csv-row.show{display:flex;}
+  input[type=file]{font-family:inherit;font-size:12px;color:var(--text);}
+  select{
+    background:#161d27;color:var(--text);border:1px solid var(--border);
+    border-radius:6px;padding:5px 8px;font-family:inherit;font-size:12.5px;
+  }
+  .runbar{display:flex;align-items:center;gap:14px;}
   button{
     background:var(--accent);color:#0b0f15;border:none;border-radius:6px;
     padding:10px 18px;font-family:inherit;font-weight:700;font-size:13px;
@@ -33,11 +47,12 @@
   button:disabled{background:#2a3340;color:var(--dim);cursor:default;}
   .status{font-size:12.5px;color:var(--dim);}
   .status.ok{color:var(--accent2);}
+  .status.err{color:var(--danger);}
 
   .terminal{
     border:1px solid var(--border);border-radius:8px;background:var(--code-bg);
     padding:14px 16px;font-size:12.5px;color:#9fb3c8;
-    max-height:420px;overflow-y:auto;white-space:pre-wrap;margin-bottom:24px;
+    max-height:380px;overflow-y:auto;white-space:pre-wrap;margin:18px 0 24px;
   }
   .terminal .green{color:#3ddc97;}
   .terminal .head{color:var(--accent);font-weight:600;}
@@ -48,26 +63,45 @@
   .section{margin-bottom:34px;display:none;}
   .section.show{display:block;}
   h3{font-size:14px;color:var(--text);margin:0 0 6px;font-weight:700;}
-  .desc{font-size:13px;color:var(--dim);margin:0 0 10px;max-width:700px;}
-  .plot{border:1px solid var(--border);border-radius:8px;background:var(--panel);
-        padding:8px;}
+  .desc{font-size:13px;color:var(--dim);margin:0 0 10px;max-width:720px;}
+  .plot{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:8px;}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-  @media (max-width:760px){.grid2{grid-template-columns:1fr;}}
-  pre.tree{
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media (max-width:760px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  pre.tree, pre.report{
     border:1px solid var(--border);border-radius:8px;background:var(--panel);
     padding:14px;font-size:12px;color:#9fb3c8;overflow-x:auto;
   }
   table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0;}
   th,td{border:1px solid var(--border);padding:6px 10px;text-align:left;}
   th{background:#141b24;color:var(--accent);font-weight:600;}
-  .predcard{border:1px solid var(--border);border-radius:8px;background:var(--panel);
-            padding:12px 14px;margin-bottom:10px;}
-  .predcard .label{font-weight:700;}
-  .label.setosa{color:var(--setosa);}
-  .label.versicolor{color:var(--versicolor);}
-  .label.virginica{color:var(--virginica);}
-  .bar{height:8px;border-radius:4px;background:#1c2733;overflow:hidden;margin-top:4px;}
-  .bar > span{display:block;height:100%;}
+
+  .card{border:1px solid var(--border);border-radius:8px;background:var(--panel);
+        padding:14px 16px;}
+  .card .big{font-size:20px;font-weight:700;color:var(--accent2);}
+  .card .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;}
+
+  /* sliders */
+  .slider-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:760px){.slider-grid{grid-template-columns:1fr;}}
+  .slider-item{background:var(--panel);border:1px solid var(--border);border-radius:8px;
+                padding:10px 14px;}
+  .slider-item .row{display:flex;justify-content:space-between;font-size:12.5px;
+                     color:var(--text);margin-bottom:4px;}
+  .slider-item .row .val{color:var(--accent2);font-weight:700;}
+  input[type=range]{width:100%;accent-color:#7c9eff;}
+
+  .pred-result{display:flex;align-items:center;gap:18px;margin-top:14px;flex-wrap:wrap;}
+  .pred-badge{font-size:18px;font-weight:800;padding:10px 18px;border-radius:8px;
+               background:#16202b;border:1px solid var(--border);}
+  .probbars{flex:1;min-width:220px;}
+  .probrow{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px;}
+  .probrow .name{width:90px;color:var(--dim);}
+  .probrow .bar{flex:1;height:8px;border-radius:4px;background:#1c2733;overflow:hidden;}
+  .probrow .bar > span{display:block;height:100%;}
+  .probrow .pct{width:40px;text-align:right;color:var(--text);}
+
   .footer-note{text-align:center;color:var(--dim);font-size:12px;margin-top:40px;
                 padding-top:16px;border-top:1px solid var(--border);}
 </style>
@@ -76,117 +110,204 @@
 
 <div class="topbar">
   <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-  <span class="title">iris pipeline — live (pyodide + plotly)</span>
+  <span class="title">advanced ml lab — live (pyodide + plotly)</span>
 </div>
 
 <div class="wrap">
 
-  <div class="runbar">
-    <button id="runBtn">▶ Run pipeline</button>
-    <span class="status" id="status">Idle — click run to load Python in your browser and execute the full script.</span>
+  <div class="controls">
+    <h4>Dataset</h4>
+    <div class="radiorow">
+      <label><input type="radio" name="datasrc" value="iris" checked> Iris (built-in)</label>
+      <label><input type="radio" name="datasrc" value="csv"> Upload CSV</label>
+    </div>
+    <div class="csv-row" id="csvRow">
+      <input type="file" id="csvFile" accept=".csv">
+      <span style="font-size:12.5px;color:var(--dim);">Target column:</span>
+      <select id="targetCol"><option>—</option></select>
+    </div>
+    <div class="runbar">
+      <button id="runBtn">▶ Run advanced pipeline</button>
+      <span class="status" id="status">Idle — runs full ML pipeline client-side via Pyodide.</span>
+    </div>
   </div>
 
   <div class="terminal" id="term">$ <span class="cursor"></span></div>
 
+  <!-- Overview -->
+  <div class="section" id="sec-overview">
+    <h3>Dataset overview</h3>
+    <div class="grid3" id="overview-cards"></div>
+  </div>
+
   <!-- EDA -->
   <div class="section" id="sec-corr">
     <h3>Feature correlation heat-map</h3>
-    <p class="desc">Pearson correlation between the 4 measurements. Petal length and petal width are almost perfectly correlated — together they carry most of the signal needed to separate species.</p>
+    <p class="desc">Pearson correlation between numeric features.</p>
     <div class="plot" id="plot-corr"></div>
   </div>
 
   <div class="section" id="sec-pairplot">
     <h3>Pairwise feature scatter (pair plot)</h3>
-    <p class="desc">Every feature plotted against every other, colored by species. Setosa (purple) separates cleanly from versicolor (teal) and virginica (rust) on almost every axis pair.</p>
+    <p class="desc">Up to 5 numeric features plotted against each other, colored by class.</p>
     <div class="plot" id="plot-pairplot"></div>
   </div>
 
   <div class="section" id="sec-box">
-    <h3>Feature distributions by species</h3>
-    <p class="desc">Box plots per feature, split by species. Petal measurements show the cleanest separation; sepal width overlaps the most across classes.</p>
+    <h3>Feature distributions by class</h3>
     <div class="plot" id="plot-box"></div>
   </div>
 
-  <!-- MODELS -->
-  <div class="section" id="sec-acc">
-    <h3>Model accuracy comparison</h3>
-    <p class="desc">Test-set accuracy for all three classifiers on the same 30-sample stratified hold-out (10 per species).</p>
-    <div class="plot" id="plot-acc"></div>
+  <!-- CV comparison -->
+  <div class="section" id="sec-cv">
+    <h3>Cross-validated model comparison</h3>
+    <p class="desc">5 classifiers (or fewer folds for tiny datasets), evaluated with stratified k-fold cross-validation on the training set. Error bars = ±1 standard deviation across folds.</p>
+    <div class="plot" id="plot-cv"></div>
   </div>
 
-  <div class="section" id="sec-cms">
-    <h3>Confusion matrices</h3>
-    <p class="desc">Rows = true species, columns = predicted species. A perfect model is a diagonal-only matrix — any off-diagonal cells are misclassifications.</p>
-    <div class="grid2" id="cm-container"></div>
+  <!-- Hyperparameter tuning -->
+  <div class="section" id="sec-tune">
+    <h3>Hyperparameter tuning (GridSearchCV — SVM)</h3>
+    <p class="desc">An SVM (RBF kernel) is tuned over a grid of <code>C</code> and <code>gamma</code> values using the same cross-validation splits. The best estimator becomes the "champion model" used below.</p>
+    <div class="grid3" id="tune-cards"></div>
   </div>
 
-  <!-- TREE -->
+  <!-- Test evaluation -->
+  <div class="section" id="sec-eval">
+    <h3>Held-out test evaluation — champion model</h3>
+    <div class="grid2">
+      <div>
+        <div class="plot" id="plot-cm"></div>
+      </div>
+      <div>
+        <pre class="report" id="report-text"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature importance -->
+  <div class="section" id="sec-fi">
+    <h3>Permutation feature importance</h3>
+    <p class="desc">How much test accuracy drops when each feature's values are randomly shuffled — a model-agnostic measure of which features the champion model actually relies on.</p>
+    <div class="plot" id="plot-fi"></div>
+  </div>
+
+  <!-- ROC -->
+  <div class="section" id="sec-roc">
+    <h3>ROC curves (one-vs-rest)</h3>
+    <p class="desc">True positive rate vs. false positive rate for each class, with AUC (area under curve) — closer to the top-left corner is better.</p>
+    <div class="plot" id="plot-roc"></div>
+  </div>
+
+  <!-- Tree -->
   <div class="section" id="sec-tree">
-    <h3>Decision tree — learned rules</h3>
-    <p class="desc">The exact splitting rules the depth-4 decision tree learned, in order. Read top to bottom: each indent level is one decision deeper.</p>
+    <h3>Decision tree — learned rules (depth 4, for reference)</h3>
     <pre class="tree" id="tree-text"></pre>
   </div>
 
-  <!-- PREDICTIONS -->
+  <!-- Live prediction -->
   <div class="section" id="sec-pred">
-    <h3>Predicting new samples (KNN, k=3)</h3>
-    <p class="desc">Three new flower measurements, scaled with the same fitted scaler, classified by the trained KNN model. The probability bars show the vote split among the 3 nearest neighbors.</p>
-    <div id="pred-container"></div>
+    <h3>Live prediction playground</h3>
+    <p class="desc">Drag the sliders to set feature values — the champion model predicts in real time.</p>
+    <div class="slider-grid" id="slider-grid"></div>
+    <div class="pred-result">
+      <div class="pred-badge" id="pred-badge">—</div>
+      <div class="probbars" id="pred-probs"></div>
+    </div>
   </div>
 
   <div class="footer-note" id="footerNote" style="display:none;">
-    Done — all computation ran locally in your browser via Pyodide (WebAssembly CPython + scikit-learn). Nothing was sent to a server.
+    All computation ran locally in your browser via Pyodide (WebAssembly CPython + scikit-learn). Nothing was uploaded to a server.
   </div>
 </div>
 
 <script>
-const SPECIES_COLORS = { setosa: '#534AB7', versicolor: '#0F6E56', virginica: '#993C1D' };
+const PALETTE = ['#534AB7','#0F6E56','#993C1D','#3D7DCA','#C9A227','#5E548E','#2E8B7B','#B5505A'];
 const term = document.getElementById('term');
 const statusEl = document.getElementById('status');
 const runBtn = document.getElementById('runBtn');
+
+let pyodideInstance = null;
+let classNames = [];
+let featureNames = [];
+let csvText = null;
+
+document.querySelectorAll('input[name=datasrc]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('csvRow').classList.toggle('show', r.value === 'csv' && r.checked);
+  });
+});
+
+document.getElementById('csvFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  csvText = await file.text();
+  const firstLine = csvText.split('\n')[0].trim();
+  const cols = firstLine.split(',').map(c => c.trim());
+  const sel = document.getElementById('targetCol');
+  sel.innerHTML = '';
+  cols.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+  sel.selectedIndex = cols.length - 1; // default: last column
+});
+
+function classColor(idx){ return PALETTE[idx % PALETTE.length]; }
 
 function termPrint(text, cls) {
   const span = document.createElement('span');
   if (cls) span.className = cls;
   span.textContent = text;
-  // insert before the trailing cursor span
   const cursor = term.querySelector('.cursor');
   term.insertBefore(span, cursor);
   term.scrollTop = term.scrollHeight;
 }
 
-// Style raw print output: highlight "=====" headers and section titles a bit
 function termPrintFormatted(line) {
   if (/^=+$/.test(line.trim())) {
     termPrint(line + '\n', 'head');
-  } else if (/^\s*(IRIS DATASET|PREDICT NEW SAMPLES|K-Nearest|Logistic Regression|Decision Tree)/.test(line)) {
+  } else if (/^\s*(DATASET|MODEL COMPARISON|HYPERPARAMETER|TEST SET|GridSearch|Champion)/.test(line)) {
     termPrint(line + '\n', 'head');
-  } else if (/Accuracy|Train:|Done!/.test(line)) {
+  } else if (/Accuracy|Best |Done!|score/.test(line)) {
     termPrint(line + '\n', 'green');
   } else {
     termPrint(line + '\n');
   }
 }
 
-function showSection(id) {
-  document.getElementById(id).classList.add('show');
-}
+function showSection(id) { document.getElementById(id).classList.add('show'); }
+function shortFeat(f) { return f.replace(' (cm)', '').replace('sepal ', 's.').replace('petal ', 'p.'); }
 
 runBtn.addEventListener('click', runPipeline);
 
 async function runPipeline() {
   runBtn.disabled = true;
-  statusEl.textContent = 'Loading Python runtime (Pyodide)… this can take ~10-20s the first time.';
+  statusEl.className = 'status';
   term.innerHTML = '$ <span class="cursor"></span>';
+  ['sec-overview','sec-corr','sec-pairplot','sec-box','sec-cv','sec-tune','sec-eval','sec-fi','sec-roc','sec-tree','sec-pred']
+    .forEach(id => document.getElementById(id).classList.remove('show'));
+
+  const useCsv = document.querySelector('input[name=datasrc]:checked').value === 'csv';
+  if (useCsv && !csvText) {
+    statusEl.textContent = 'Please choose a CSV file first.';
+    statusEl.classList.add('err');
+    runBtn.disabled = false;
+    return;
+  }
+  const targetCol = useCsv ? document.getElementById('targetCol').value : null;
 
   try {
-    const pyodide = await loadPyodide();
-    statusEl.textContent = 'Installing scikit-learn, pandas, numpy…';
-    await pyodide.loadPackage(['numpy', 'pandas', 'scikit-learn']);
+    if (!pyodideInstance) {
+      statusEl.textContent = 'Loading Python runtime (Pyodide)… first run can take ~10-20s.';
+      pyodideInstance = await loadPyodide();
+      statusEl.textContent = 'Installing scikit-learn, pandas, numpy…';
+      await pyodideInstance.loadPackage(['numpy', 'pandas', 'scikit-learn']);
+    }
+    const pyodide = pyodideInstance;
+    statusEl.textContent = 'Running advanced pipeline…';
 
-    statusEl.textContent = 'Running iris_classification.py …';
-
-    // Stream stdout into the terminal
     let lineBuffer = '';
     pyodide.setStdout({
       batched: (s) => {
@@ -197,287 +318,433 @@ async function runPipeline() {
       }
     });
 
-    const pyCode = `
-import json
-import numpy as np
-import pandas as pd
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier, export_text
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+    pyodide.globals.set('CSV_TEXT', useCsv ? csvText : null);
+    pyodide.globals.set('TARGET_COL', useCsv ? targetCol : null);
 
-iris = load_iris()
-df = pd.DataFrame(iris.data, columns=iris.feature_names)
-df['species'] = pd.Categorical.from_codes(iris.target, iris.target_names)
-
-print("=" * 55)
-print("IRIS DATASET — first 5 rows")
-print("=" * 55)
-print(df.head().to_string())
-print("\\nShape:", df.shape)
-print("\\nClass distribution:")
-print(df['species'].value_counts().to_string())
-print("\\nBasic stats:")
-print(df.describe().round(2).to_string())
-
-corr = df.drop(columns='species').corr().round(3)
-
-X = iris.data
-y = iris.target
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
-)
-scaler = StandardScaler()
-Xs_train = scaler.fit_transform(X_train)
-Xs_test = scaler.transform(X_test)
-print(f"\\nTrain: {X_train.shape[0]} samples  |  Test: {X_test.shape[0]} samples")
-
-models = {
-    "K-Nearest Neighbors (k=3)": KNeighborsClassifier(n_neighbors=3),
-    "Logistic Regression":       LogisticRegression(max_iter=200, random_state=42),
-    "Decision Tree (max_depth=4)": DecisionTreeClassifier(max_depth=4, random_state=42),
-}
-
-results = {}
-cms = {}
-for name, model in models.items():
-    if "Decision Tree" in name:
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-    else:
-        model.fit(Xs_train, y_train)
-        y_pred = model.predict(Xs_test)
-    acc = accuracy_score(y_test, y_pred)
-    results[name] = acc
-    cms[name] = confusion_matrix(y_test, y_pred).tolist()
-
-    print("\\n" + "=" * 55)
-    print(f"  {name}")
-    print("=" * 55)
-    print(f"  Accuracy : {acc:.2%}")
-    print()
-    print(classification_report(y_test, y_pred, target_names=iris.target_names))
-
-tree_text = export_text(models["Decision Tree (max_depth=4)"], feature_names=list(iris.feature_names))
-
-new_samples = [
-    [5.1, 3.5, 1.4, 0.2],
-    [6.0, 2.9, 4.5, 1.5],
-    [6.7, 3.0, 5.5, 2.1],
-]
-knn = models["K-Nearest Neighbors (k=3)"]
-new_scaled = scaler.transform(new_samples)
-
-print("\\n" + "=" * 55)
-print("  PREDICT NEW SAMPLES")
-print("=" * 55)
-
-preds_out = []
-for sample, scaled in zip(new_samples, new_scaled):
-    pred = knn.predict([scaled])[0]
-    prob = knn.predict_proba([scaled])[0]
-    print(f"\\n  Input  : sepal={sample[:2]}, petal={sample[2:]}")
-    print(f"  Predicted : {iris.target_names[pred].upper()}")
-    print("  Probabilities: " + ", ".join(f"{n}={p:.0%}" for n, p in zip(iris.target_names, prob)))
-    preds_out.append({
-        "input": sample,
-        "pred": iris.target_names[pred],
-        "prob": dict(zip(iris.target_names.tolist(), [float(p) for p in prob]))
-    })
-
-print("\\nDone! All plots saved as PNG files in the same folder.")
-
-payload = {
-    "features": list(iris.feature_names),
-    "species_names": iris.target_names.tolist(),
-    "data": df.drop(columns='species').values.tolist(),
-    "species": df['species'].astype(str).tolist(),
-    "corr": corr.values.tolist(),
-    "accuracies": {k: float(v) for k, v in results.items()},
-    "cms": cms,
-    "tree_text": tree_text,
-    "predictions": preds_out,
-}
-json.dumps(payload)
-`;
-
-    const resultJson = await pyodide.runPythonAsync(pyCode);
+    const resultJson = await pyodide.runPythonAsync(PY_CODE);
     const result = JSON.parse(resultJson);
+
+    classNames = result.class_names;
+    featureNames = result.feature_names;
 
     statusEl.textContent = 'Rendering charts…';
     renderAll(result);
 
-    statusEl.textContent = '✓ Pipeline complete — all results computed locally in your browser.';
+    statusEl.textContent = '✓ Pipeline complete.';
     statusEl.classList.add('ok');
     document.getElementById('footerNote').style.display = 'block';
   } catch (err) {
     console.error(err);
     statusEl.textContent = 'Error: ' + err.message;
+    statusEl.classList.add('err');
   } finally {
     runBtn.disabled = false;
     runBtn.textContent = '↻ Run again';
   }
 }
 
+const PY_CODE = `
+import json, io
+import numpy as np
+import pandas as pd
+from collections import Counter
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, GridSearchCV
+from sklearn.preprocessing import StandardScaler, LabelEncoder, label_binarize
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve, auc
+from sklearn.inspection import permutation_importance
+
+if CSV_TEXT:
+    df_full = pd.read_csv(io.StringIO(CSV_TEXT))
+    target_col = TARGET_COL
+    y_raw = df_full[target_col].astype(str)
+    X_df = df_full.drop(columns=[target_col]).select_dtypes(include=[np.number])
+    X_df = X_df.dropna(axis=1, how='all')
+    X_df = X_df.fillna(X_df.mean(numeric_only=True))
+    valid = y_raw.notna() & X_df.notna().all(axis=1)
+    X_df = X_df[valid].reset_index(drop=True)
+    y_raw = y_raw[valid].reset_index(drop=True)
+    le = LabelEncoder()
+    y = le.fit_transform(y_raw)
+    class_names = [str(c) for c in le.classes_]
+    feature_names = list(X_df.columns)
+    dataset_name = "Custom CSV"
+    if len(feature_names) == 0:
+        raise ValueError("No numeric feature columns found besides the target column.")
+else:
+    from sklearn.datasets import load_iris
+    iris = load_iris()
+    X_df = pd.DataFrame(iris.data, columns=iris.feature_names)
+    y = iris.target
+    class_names = [str(c) for c in iris.target_names]
+    feature_names = list(iris.feature_names)
+    dataset_name = "Iris"
+
+n_samples, n_features = X_df.shape
+counts = Counter(y)
+min_count = min(counts.values())
+
+print("=" * 55)
+print(f"DATASET: {dataset_name}")
+print("=" * 55)
+print(f"Samples: {n_samples}  |  Features: {n_features}  |  Classes: {len(class_names)}")
+for i, cn in enumerate(class_names):
+    print(f"  {cn}: {counts.get(i,0)}")
+
+# --- correlation ---
+corr = X_df.corr().round(3)
+
+# --- split ---
+try:
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_df.values, y, test_size=0.2, random_state=42, stratify=y
+    )
+except ValueError:
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_df.values, y, test_size=0.2, random_state=42
+    )
+
+scaler = StandardScaler()
+Xs_train = scaler.fit_transform(X_train)
+Xs_test = scaler.transform(X_test)
+print(f"\\nTrain: {len(X_train)} samples  |  Test: {len(X_test)} samples")
+
+n_splits = max(2, min(5, min_count, len(X_train) // len(class_names) if len(class_names) else 2))
+n_splits = max(2, min(n_splits, len(X_train)))
+skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+
+k_neighbors = max(1, min(5, len(X_train) - 1))
+
+models = {
+    "K-Nearest Neighbors": KNeighborsClassifier(n_neighbors=k_neighbors),
+    "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
+    "Decision Tree": DecisionTreeClassifier(max_depth=4, random_state=42),
+    "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
+    "SVM (RBF)": SVC(kernel='rbf', probability=True, random_state=42),
+}
+
+print("\\n" + "=" * 55)
+print("MODEL COMPARISON (cross-validation)")
+print("=" * 55)
+cv_results = {}
+for name, model in models.items():
+    try:
+        scores = cross_val_score(model, Xs_train, y_train, cv=skf)
+        cv_results[name] = {"mean": float(scores.mean()), "std": float(scores.std()), "scores": scores.tolist()}
+        print(f"  {name:22s} : {scores.mean():.2%}  (+/- {scores.std():.2%})")
+    except Exception as e:
+        cv_results[name] = {"mean": None, "std": None, "scores": [], "error": str(e)}
+        print(f"  {name:22s} : failed ({e})")
+
+# --- hyperparameter tuning (SVM) ---
+print("\\n" + "=" * 55)
+print("HYPERPARAMETER TUNING (GridSearchCV — SVM, RBF)")
+print("=" * 55)
+param_grid = {"C": [0.1, 1, 10, 100], "gamma": ["scale", 0.1, 0.01, 1]}
+gs = GridSearchCV(SVC(kernel="rbf", probability=True, random_state=42), param_grid, cv=skf)
+gs.fit(Xs_train, y_train)
+best_model = gs.best_estimator_
+best_params = gs.best_params_
+best_cv_score = float(gs.best_score_)
+print(f"  Best params : {best_params}")
+print(f"  Best CV score : {best_cv_score:.2%}")
+print("  Champion model: tuned SVM (RBF)")
+
+# --- test evaluation ---
+print("\\n" + "=" * 55)
+print("TEST SET EVALUATION — champion model")
+print("=" * 55)
+y_pred = best_model.predict(Xs_test)
+test_acc = float(accuracy_score(y_test, y_pred))
+cm = confusion_matrix(y_test, y_pred, labels=list(range(len(class_names)))).tolist()
+report = classification_report(y_test, y_pred, target_names=class_names, zero_division=0)
+print(f"  Accuracy: {test_acc:.2%}")
+print()
+print(report)
+
+# --- feature importance (permutation) ---
+n_repeats = 20 if len(X_test) > 0 else 0
+if n_repeats > 0:
+    perm = permutation_importance(best_model, Xs_test, y_test, n_repeats=n_repeats, random_state=42)
+    fi = perm.importances_mean.tolist()
+    fi = [max(0.0, v) for v in fi]
+else:
+    fi = [0.0] * len(feature_names)
+
+# --- ROC curves (one-vs-rest) ---
+n_classes = len(class_names)
+y_test_bin = label_binarize(y_test, classes=list(range(n_classes)))
+if n_classes == 2:
+    y_test_bin = np.hstack([1 - y_test_bin, y_test_bin])
+probs = best_model.predict_proba(Xs_test)
+roc_data = {}
+for i, cn in enumerate(class_names):
+    try:
+        fpr, tpr, _ = roc_curve(y_test_bin[:, i], probs[:, i])
+        roc_data[cn] = {"fpr": fpr.tolist(), "tpr": tpr.tolist(), "auc": float(auc(fpr, tpr))}
+    except Exception:
+        roc_data[cn] = {"fpr": [0, 1], "tpr": [0, 1], "auc": 0.5}
+
+# --- decision tree text (reference) ---
+dt = DecisionTreeClassifier(max_depth=4, random_state=42).fit(X_train, y_train)
+tree_text = export_text(dt, feature_names=feature_names)
+
+# --- pairplot / boxplot data ---
+plot_feats = feature_names[:5]
+class_labels = [class_names[i] for i in y]
+
+# --- feature ranges for sliders ---
+feature_ranges = {}
+for f in feature_names:
+    col = X_df[f]
+    feature_ranges[f] = {
+        "min": float(col.min()), "max": float(col.max()),
+        "mean": float(col.mean()), "step": float((col.max() - col.min()) / 100 or 0.01)
+    }
+
+print("\\nDone! Champion model ready for live predictions.")
+
+payload = {
+    "dataset_name": dataset_name,
+    "n_samples": n_samples,
+    "n_features": n_features,
+    "class_names": class_names,
+    "class_counts": {class_names[i]: counts.get(i, 0) for i in range(len(class_names))},
+    "feature_names": feature_names,
+    "plot_features": plot_feats,
+    "corr_features": list(corr.columns),
+    "corr": corr.values.tolist(),
+    "pairplot_data": X_df[plot_feats].values.tolist(),
+    "pairplot_labels": class_labels,
+    "cv_results": cv_results,
+    "best_params": {k: (str(v)) for k, v in best_params.items()},
+    "best_cv_score": best_cv_score,
+    "test_acc": test_acc,
+    "cm": cm,
+    "report": report,
+    "feature_importance": fi,
+    "roc_data": roc_data,
+    "tree_text": tree_text,
+    "feature_ranges": feature_ranges,
+}
+
+def predict_sample_json(values_json):
+    values = json.loads(values_json)
+    arr = np.array(values, dtype=float).reshape(1, -1)
+    arr_s = scaler.transform(arr)
+    probs = best_model.predict_proba(arr_s)[0]
+    pred_idx = int(np.argmax(probs))
+    return json.dumps({
+        "pred": class_names[pred_idx],
+        "probs": {class_names[i]: float(p) for i, p in enumerate(probs)}
+    })
+
+import builtins
+builtins.predict_sample_json = predict_sample_json
+
+json.dumps(payload)
+`;
+
 function renderAll(r) {
+  renderOverview(r);
   renderCorr(r);
   renderPairplot(r);
   renderBox(r);
-  renderAccuracy(r);
-  renderConfusions(r);
+  renderCV(r);
+  renderTuning(r);
+  renderEval(r);
+  renderFI(r);
+  renderROC(r);
   renderTree(r);
-  renderPredictions(r);
+  renderSliders(r);
 }
 
-function shortFeat(f) {
-  return f.replace(' (cm)', '').replace('sepal ', 's.').replace('petal ', 'p.');
+function renderOverview(r) {
+  const container = document.getElementById('overview-cards');
+  container.innerHTML = '';
+  const cards = [
+    {lbl: 'Dataset', big: r.dataset_name},
+    {lbl: 'Samples / Features', big: `${r.n_samples} / ${r.n_features}`},
+    {lbl: 'Classes', big: r.class_names.join(', ')},
+  ];
+  cards.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div class="lbl">${c.lbl}</div><div class="big" style="font-size:14px;margin-top:4px;">${c.big}</div>`;
+    container.appendChild(div);
+  });
+  showSection('sec-overview');
 }
 
 function renderCorr(r) {
-  const labels = r.features.map(shortFeat);
+  const labels = r.corr_features.map(shortFeat);
   const z = r.corr;
   Plotly.newPlot('plot-corr', [{
     z, x: labels, y: labels, type: 'heatmap',
     colorscale: 'RdBu', reversescale: true, zmin: -1, zmax: 1,
     text: z.map(row => row.map(v => v.toFixed(2))),
-    texttemplate: '%{text}',
-    showscale: true
+    texttemplate: '%{text}', showscale: true
   }], {
     paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
     font: { color: '#cfd6e0', size: 11 },
-    margin: { l: 90, r: 20, t: 20, b: 60 },
-    height: 380
+    margin: { l: 90, r: 20, t: 20, b: 60 }, height: 380
   }, {responsive: true, displayModeBar: false});
   showSection('sec-corr');
 }
 
 function renderPairplot(r) {
-  const feats = r.features;
-  const colors = r.species.map(s => SPECIES_COLORS[s]);
+  const feats = r.plot_features;
+  const colors = r.pairplot_labels.map(l => classColor(r.class_names.indexOf(l)));
   const dims = feats.map((f, i) => ({
     label: shortFeat(f),
-    values: r.data.map(row => row[i])
+    values: r.pairplot_data.map(row => row[i])
   }));
   Plotly.newPlot('plot-pairplot', [{
-    type: 'splom',
-    dimensions: dims,
+    type: 'splom', dimensions: dims,
     marker: { color: colors, size: 4, opacity: 0.7, line: {width:0} },
-    diagonal: { visible: false },
-    showupperhalf: true
+    diagonal: { visible: false }, showupperhalf: true
   }], {
     paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
     font: { color: '#cfd6e0', size: 10 },
-    margin: { l: 50, r: 20, t: 20, b: 40 },
-    height: 560,
-    showlegend: false
+    margin: { l: 50, r: 20, t: 20, b: 40 }, height: 560, showlegend: false
   }, {responsive: true, displayModeBar: false});
   showSection('sec-pairplot');
 }
 
 function renderBox(r) {
-  const feats = r.features;
-  const speciesOrder = ['setosa', 'versicolor', 'virginica'];
+  const feats = r.plot_features;
   const traces = [];
-  const positions = [
-    {x:'x', y:'y'}, {x:'x2', y:'y2'}, {x:'x3', y:'y3'}, {x:'x4', y:'y4'}
-  ];
+  const positions = [{x:'x',y:'y'},{x:'x2',y:'y2'},{x:'x3',y:'y3'},{x:'x4',y:'y4'},{x:'x5',y:'y5'}];
   const annotations = [];
+  const cols = 2;
 
   feats.forEach((f, fi) => {
-    speciesOrder.forEach(sp => {
-      const vals = r.data
-        .map((row, i) => ({row, sp: r.species[i]}))
-        .filter(d => d.sp === sp)
+    r.class_names.forEach((cn, ci) => {
+      const vals = r.pairplot_data
+        .map((row, i) => ({row, lbl: r.pairplot_labels[i]}))
+        .filter(d => d.lbl === cn)
         .map(d => d.row[fi]);
       traces.push({
-        y: vals,
-        type: 'box',
-        name: sp,
-        marker: { color: SPECIES_COLORS[sp] },
-        line: { color: SPECIES_COLORS[sp] },
-        fillcolor: SPECIES_COLORS[sp],
-        opacity: 0.6,
-        xaxis: positions[fi].x,
-        yaxis: positions[fi].y,
-        showlegend: fi === 0,
-        legendgroup: sp
+        y: vals, type: 'box', name: cn,
+        marker: { color: classColor(ci) }, line: { color: classColor(ci) },
+        fillcolor: classColor(ci), opacity: 0.6,
+        xaxis: positions[fi].x, yaxis: positions[fi].y,
+        showlegend: fi === 0, legendgroup: cn
       });
     });
+    const row = Math.floor(fi / cols), col = fi % cols;
     annotations.push({
-      text: shortFeat(f),
-      xref: 'paper', yref: 'paper',
-      x: (fi % 2 === 0) ? 0.22 : 0.78,
-      y: (fi < 2) ? 1.06 : 0.46,
-      showarrow: false,
-      font: { color: '#7c9eff', size: 12 }
+      text: shortFeat(f), xref: 'paper', yref: 'paper',
+      x: col === 0 ? 0.22 : 0.78,
+      y: 1.06 - row * 0.52,
+      showarrow: false, font: { color: '#7c9eff', size: 12 }
     });
   });
 
-  const layout = {
+  const rows = Math.ceil(feats.length / cols);
+  Plotly.newPlot('plot-box', traces, {
     paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
     font: { color: '#cfd6e0', size: 10 },
-    grid: { rows: 2, columns: 2, pattern: 'independent', xgap: 0.25, ygap: 0.25 },
+    grid: { rows, columns: cols, pattern: 'independent', xgap: 0.25, ygap: 0.3 },
     margin: { l: 40, r: 20, t: 40, b: 30 },
-    height: 520,
-    annotations,
-    legend: { orientation: 'h', y: -0.05 }
-  };
-  Plotly.newPlot('plot-box', traces, layout, {responsive: true, displayModeBar: false});
+    height: 260 * rows, annotations, legend: { orientation: 'h', y: -0.05 }
+  }, {responsive: true, displayModeBar: false});
   showSection('sec-box');
 }
 
-function renderAccuracy(r) {
-  const names = Object.keys(r.accuracies);
-  const vals = names.map(n => r.accuracies[n]);
-  const colors = ['#534AB7', '#0F6E56', '#993C1D'];
-  Plotly.newPlot('plot-acc', [{
-    x: vals, y: names, type: 'bar', orientation: 'h',
-    marker: { color: colors },
-    text: vals.map(v => (v * 100).toFixed(2) + '%'),
-    textposition: 'outside',
-    textfont: { color: '#cfd6e0' }
+function renderCV(r) {
+  const names = Object.keys(r.cv_results);
+  const means = names.map(n => r.cv_results[n].mean ?? 0);
+  const stds = names.map(n => r.cv_results[n].std ?? 0);
+  Plotly.newPlot('plot-cv', [{
+    x: means, y: names, type: 'bar', orientation: 'h',
+    error_x: { type: 'data', array: stds, color: '#7c9eff' },
+    marker: { color: names.map((_,i) => classColor(i)) },
+    text: means.map(v => (v*100).toFixed(1) + '%'),
+    textposition: 'outside', textfont: { color: '#cfd6e0' }
   }], {
     paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
     font: { color: '#cfd6e0', size: 12 },
-    xaxis: { range: [0.85, 1.05], tickformat: '.0%', gridcolor: '#1f2630' },
-    margin: { l: 200, r: 60, t: 20, b: 40 },
-    height: 260
+    xaxis: { range: [0, 1.15], tickformat: '.0%', gridcolor: '#1f2630' },
+    margin: { l: 170, r: 60, t: 20, b: 40 }, height: 280
   }, {responsive: true, displayModeBar: false});
-  showSection('sec-acc');
+  showSection('sec-cv');
 }
 
-function renderConfusions(r) {
-  const container = document.getElementById('cm-container');
+function renderTuning(r) {
+  const container = document.getElementById('tune-cards');
   container.innerHTML = '';
-  Object.entries(r.cms).forEach(([name, cm], idx) => {
+  const paramsStr = Object.entries(r.best_params).map(([k,v]) => `${k}=${v}`).join(', ');
+  const cards = [
+    {lbl: 'Best params', big: paramsStr},
+    {lbl: 'Best CV score', big: (r.best_cv_score*100).toFixed(2) + '%'},
+    {lbl: 'Test accuracy', big: (r.test_acc*100).toFixed(2) + '%'},
+  ];
+  cards.forEach(c => {
     const div = document.createElement('div');
-    div.className = 'plot';
-    div.innerHTML = `<div style="font-size:12px;color:#7c9eff;margin-bottom:4px;">${name}</div>`;
-    const plotDiv = document.createElement('div');
-    plotDiv.id = 'cm-plot-' + idx;
-    div.appendChild(plotDiv);
+    div.className = 'card';
+    div.innerHTML = `<div class="lbl">${c.lbl}</div><div class="big" style="font-size:15px;margin-top:4px;">${c.big}</div>`;
     container.appendChild(div);
-
-    const labels = r.species_names;
-    Plotly.newPlot(plotDiv.id, [{
-      z: cm, x: labels, y: labels, type: 'heatmap',
-      colorscale: 'Blues',
-      text: cm.map(row => row.map(v => String(v))),
-      texttemplate: '%{text}',
-      showscale: false
-    }], {
-      paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-      font: { color: '#cfd6e0', size: 10 },
-      xaxis: { title: 'predicted', side: 'bottom' },
-      yaxis: { title: 'true', autorange: 'reversed' },
-      margin: { l: 70, r: 10, t: 10, b: 50 },
-      height: 280
-    }, {responsive: true, displayModeBar: false});
   });
-  showSection('sec-cms');
+  showSection('sec-tune');
+}
+
+function renderEval(r) {
+  const labels = r.class_names;
+  Plotly.newPlot('plot-cm', [{
+    z: r.cm, x: labels, y: labels, type: 'heatmap', colorscale: 'Blues',
+    text: r.cm.map(row => row.map(v => String(v))),
+    texttemplate: '%{text}', showscale: false
+  }], {
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+    font: { color: '#cfd6e0', size: 10 },
+    xaxis: { title: 'predicted' }, yaxis: { title: 'true', autorange: 'reversed' },
+    margin: { l: 80, r: 10, t: 10, b: 50 }, height: 320
+  }, {responsive: true, displayModeBar: false});
+  document.getElementById('report-text').textContent = r.report;
+  showSection('sec-eval');
+}
+
+function renderFI(r) {
+  const feats = r.feature_names.map(shortFeat);
+  const fi = r.feature_importance;
+  const order = fi.map((v,i) => i).sort((a,b) => fi[a]-fi[b]);
+  Plotly.newPlot('plot-fi', [{
+    x: order.map(i => fi[i]), y: order.map(i => feats[i]),
+    type: 'bar', orientation: 'h',
+    marker: { color: '#7c9eff' }
+  }], {
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+    font: { color: '#cfd6e0', size: 12 },
+    xaxis: { title: 'mean accuracy drop', gridcolor: '#1f2630' },
+    margin: { l: 140, r: 20, t: 10, b: 40 }, height: 60 * feats.length + 60
+  }, {responsive: true, displayModeBar: false});
+  showSection('sec-fi');
+}
+
+function renderROC(r) {
+  const traces = r.class_names.map((cn, i) => ({
+    x: r.roc_data[cn].fpr, y: r.roc_data[cn].tpr, mode: 'lines',
+    name: `${cn} (AUC=${r.roc_data[cn].auc.toFixed(3)})`,
+    line: { color: classColor(i), width: 2 }
+  }));
+  traces.push({
+    x: [0,1], y: [0,1], mode: 'lines', name: 'chance',
+    line: { color: '#6b7785', dash: 'dash', width: 1 }
+  });
+  Plotly.newPlot('plot-roc', traces, {
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+    font: { color: '#cfd6e0', size: 12 },
+    xaxis: { title: 'False positive rate', range: [0,1], gridcolor: '#1f2630' },
+    yaxis: { title: 'True positive rate', range: [0,1], gridcolor: '#1f2630' },
+    margin: { l: 60, r: 20, t: 20, b: 50 }, height: 380,
+    legend: { font: { size: 11 } }
+  }, {responsive: true, displayModeBar: false});
+  showSection('sec-roc');
 }
 
 function renderTree(r) {
@@ -485,28 +752,59 @@ function renderTree(r) {
   showSection('sec-tree');
 }
 
-function renderPredictions(r) {
-  const container = document.getElementById('pred-container');
+let currentValues = {};
+function renderSliders(r) {
+  const container = document.getElementById('slider-grid');
   container.innerHTML = '';
-  r.predictions.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'predcard';
-    let probsHtml = '';
-    Object.entries(p.prob).forEach(([sp, val]) => {
-      probsHtml += `
-        <div style="margin-top:6px;font-size:12px;">
-          <span class="label ${sp}">${sp}</span> — ${(val*100).toFixed(0)}%
-          <div class="bar"><span style="width:${val*100}%;background:${SPECIES_COLORS[sp]}"></span></div>
-        </div>`;
-    });
-    card.innerHTML = `
-      <div>Input — sepal: [${p.input[0]}, ${p.input[1]}] cm, petal: [${p.input[2]}, ${p.input[3]}] cm</div>
-      <div style="margin-top:4px;">Predicted: <span class="label ${p.pred}">${p.pred.toUpperCase()}</span></div>
-      ${probsHtml}
+  currentValues = {};
+  r.feature_names.forEach(f => {
+    const range = r.feature_ranges[f];
+    currentValues[f] = range.mean;
+    const item = document.createElement('div');
+    item.className = 'slider-item';
+    item.innerHTML = `
+      <div class="row"><span>${f}</span><span class="val" id="val-${cssSafe(f)}">${range.mean.toFixed(2)}</span></div>
+      <input type="range" min="${range.min}" max="${range.max}" step="${range.step}" value="${range.mean}" data-feat="${f}">
     `;
-    container.appendChild(card);
+    container.appendChild(item);
+    item.querySelector('input').addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      currentValues[f] = v;
+      document.getElementById('val-' + cssSafe(f)).textContent = v.toFixed(2);
+      updatePrediction(r);
+    });
   });
   showSection('sec-pred');
+  updatePrediction(r);
+}
+
+function cssSafe(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+async function updatePrediction(r) {
+  const values = r.feature_names.map(f => currentValues[f]);
+  const fn = pyodideInstance.globals.get('predict_sample_json');
+  const resultStr = fn(JSON.stringify(values));
+  const result = JSON.parse(resultStr);
+
+  const badge = document.getElementById('pred-badge');
+  const idx = r.class_names.indexOf(result.pred);
+  badge.textContent = result.pred.toUpperCase();
+  badge.style.color = classColor(idx);
+  badge.style.borderColor = classColor(idx);
+
+  const probsContainer = document.getElementById('pred-probs');
+  probsContainer.innerHTML = '';
+  r.class_names.forEach((cn, i) => {
+    const p = result.probs[cn];
+    const row = document.createElement('div');
+    row.className = 'probrow';
+    row.innerHTML = `
+      <span class="name">${cn}</span>
+      <span class="bar"><span style="width:${p*100}%;background:${classColor(i)}"></span></span>
+      <span class="pct">${(p*100).toFixed(0)}%</span>
+    `;
+    probsContainer.appendChild(row);
+  });
 }
 </script>
 
